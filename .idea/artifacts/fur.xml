@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="fur">
+    <output-path>$USER_HOME$/Desktop/플긴아무거나/plugins</output-path>
+    <root id="archive" name="fur.jar">
+      <element id="module-output" name="portable_furnace" />
+    </root>
+  </artifact>
+</component>

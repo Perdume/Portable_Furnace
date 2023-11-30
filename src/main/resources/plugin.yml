@@ -1,0 +1,4 @@
+name: portable_furnace
+version: '${project.version}'
+main: org.perdume.portable_furnace.Portable_furnace
+api-version: '1.20'
