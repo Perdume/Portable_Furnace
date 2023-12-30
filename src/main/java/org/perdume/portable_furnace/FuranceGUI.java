@@ -1,19 +1,21 @@
 package org.perdume.portable_furnace;
 
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.entity.TileEntityFurnace;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.block.Furnace;
+import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
 import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
-import org.bukkit.inventory.FurnaceRecipe;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.Recipe;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
+
+
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -22,6 +24,8 @@ public class FuranceGUI implements Listener {
     private final Inventory inv;
 
     private Boolean isAct = false;
+
+    private Double BurningTimes = 1.5;
 
     private Portable_furnace main = Portable_furnace.getPlugin(Portable_furnace.class);
 
@@ -56,8 +60,6 @@ public class FuranceGUI implements Listener {
 
                 final ItemStack clickedItem = e.getCurrentItem();
                 final ItemStack clickedItem2 = e.getCursor();
-//        Bukkit.broadcastMessage("clid: " + clickedItem );
-//        Bukkit.broadcastMessage("Cursor: " + clickedItem2 );
 
                 final Player p = (Player) e.getWhoClicked();
 
@@ -69,33 +71,26 @@ public class FuranceGUI implements Listener {
                 if(inv.getItem(1) == null){
                     it1 = new ItemStack(Material.AIR);
                 }
-                if (e.getSlot() == 2){
-                    if(inv.getItem(2) == null && !it1.getType().isAir()&& !it0.getType().isAir()) {
-                        it1.setAmount((int) (it1.getAmount() - Math.ceil((double) it0.getAmount() / 8)));
-                        inv.setItem(0, new ItemStack(Material.AIR));
-                        it0 = new ItemStack(Material.AIR);
-                        isAct = true;
+                if (isDone(it0, it1)){
+                    if(inv.getItem(2) != null) return;
+                    if(e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) return;
+                    if(it1.getType() == Material.LAVA_BUCKET) {
+                        inv.setItem(1, new ItemStack(Material.BUCKET));
                     }
-                    if(inv.getItem(2) != null && !it1.getType().isAir()&& !it0.getType().isAir()) {
-                        int takenAmount = it0.getAmount() - inv.getItem(2).getAmount();
-                        it1.setAmount((int) (it1.getAmount() - Math.ceil((double) takenAmount / 8)));
-                        inv.setItem(0, new ItemStack(it0.getType(), it0.getAmount() - takenAmount));
-                        it0 = inv.getItem(0);
-                        isAct = true;
+                    else{
+                        int buntimes = (int) (getBurntime(new ItemStack(it1.getType(), 1))/(200 * BurningTimes));
+                        int col = (int) Math.ceil((double) it0.getAmount()/buntimes);
+                        it1.setAmount(it1.getAmount() - col);
                     }
-                }
-                Boolean isdon = isDone(it0, it1);
-                if (isdon){
-                    if(inv.getItem(2) == null) {
+                    isAct = true;
+                    inv.setItem(0, new ItemStack(it0.getType(),it0.getAmount() - RevCount(it0.getAmount())));
+                    if(inv.getItem(2) == null || e.getSlot() != 2) {
                         if (it0.getType() == Material.AIR) {
                             inv.setItem(2, ReturnItem(clickedItem2));
                         } else {
                             inv.setItem(2, ReturnItem(it0));
                         }
                     }
-                }
-                else{
-                    inv.setItem(2, new ItemStack(Material.AIR));
                 }
 
             }
@@ -130,17 +125,42 @@ public class FuranceGUI implements Listener {
             Recipe recipe = iter.next();
             if (!(recipe instanceof FurnaceRecipe)) continue;
             if (((FurnaceRecipe) recipe).getInput().getType() != input.getType()) continue;
-            return new ItemStack(recipe.getResult().getType(), input.getAmount());
+            return new ItemStack(recipe.getResult().getType(), RevCount(input.getAmount()));
         }
         return null;
     }
 
+    private int RevCount(int it0count){
+        if(inv.getItem(1) == null){
+            return 0;
+        }
+        int Count = inv.getItem(1).getAmount(); //Get ItemCount
+        int BurnCount = (int) (getBurntime(inv.getItem(1))/(200 * BurningTimes)); //Get Max Burncount
+        if(BurnCount >= it0count){
+            return it0count;
+        }
+        else if(Count * BurnCount < 64){
+            return Count * BurnCount;
+        }
+        else{
+            return 64;
+        }
+    }
+
     private Boolean isDone(ItemStack it0, ItemStack it1){
-            if (it1.getType() == Material.COAL) {
+            if (TileEntityFurnace.f().containsKey(CraftItemStack.asNMSCopy(it1).d())) {
                 if (ReturnItem(it0) != null && it0 != null && !it0.getType().isAir()) {
                     return true;
                 }
             }
         return false;
+    }
+
+    private int getBurntime(ItemStack is){
+        Item i = CraftItemStack.asNMSCopy(is).d(); //Minecarft Item
+        if (TileEntityFurnace.f().containsKey(i)) {
+            return TileEntityFurnace.f().get(i);
+        }
+        return 0;
     }
 }
